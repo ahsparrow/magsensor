@@ -424,7 +424,7 @@ class MCP2515:  # pylint:disable=too-many-instance-attributes
         # read from buffer
         with self._bus_device_obj as spi:
             spi.write(bytes([read_command]))
-            buffer = spi.read(13)   # 4 ID, DLC, and 8 data
+            buffer = spi.read(13)  # 4 ID, DLC, and 8 data
 
         ######### Unpack IDs/ set Extended #######
 
@@ -822,7 +822,7 @@ class MCP2515:  # pylint:disable=too-many-instance-attributes
         """If the device is in the bus off state, restart it."""
         self.initialize()
 
-    def listen(self, matches=None, *, timeout = 1000):
+    def listen(self, matches=None, *, timeout=1000):
         """Start receiving messages that match any one of the filters.
 
         Creating a listener is an expensive operation and can interfere with reception of messages
@@ -898,6 +898,14 @@ class MCP2515:  # pylint:disable=too-many-instance-attributes
     def __exit__(self, unused1, unused2, unused3):
         """Calls deinit()"""
         self.deinit()
+
+    def load_filters(self, masks, filters):
+        for addr, mask in zip(MASKS, masks):
+            self._write_id_to_register(addr, mask, False)
+
+        filter_addresses = [x for sub in FILTERS for x in sub]
+        for addr, filt in zip(filter_addresses, filters):
+            self._write_id_to_register(addr, filt, False)
 
     ##################### End canio API ################
 
