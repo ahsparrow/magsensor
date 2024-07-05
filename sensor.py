@@ -43,7 +43,7 @@ async def can_task(msg_q, id):
             rx_msg = listener.receive()
 
             if rx_msg.data == b"ECHO":
-                tx_msg = Message(id=id, data=b"ECHO")
+                tx_msg = Message(id=id, data=b"OHCE")
                 can.send(tx_msg)
 
         await asyncio.sleep_ms(0)
