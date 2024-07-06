@@ -19,9 +19,7 @@ async def can_task():
     while True:
         if listener.in_waiting():
             rx_msg = listener.receive()
-
-            if rx_msg.data == b"OHCE":
-                print(f"ECHO received sensor: {rx_msg.id}")
+            print(f"Message received: {rx_msg.id}, {bytes(rx_msg.data)}")
 
         await asyncio.sleep_ms(0)
 
