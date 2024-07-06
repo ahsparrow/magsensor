@@ -10,7 +10,7 @@ import time
 MASKS = [0x7FF, 0x7FF]
 FILTERS = [0, 0, 0, 0, 0, 0]
 
-CAN_ID = 1
+DEFAULT_CAN_ID = 0x7FF
 
 SCK_PIN = 2
 MOSI_PIN = 3
@@ -90,9 +90,21 @@ async def sensor_task(msg_q):
         await asyncio.sleep_ms(1000)
 
 
-async def main():
+async def main(can_id=None):
+    # If CAN id not specified read value from file
+    if can_id is None:
+        try:
+            with open("_can_id.txt") as f:
+                can_id = int(f.readline())
+                if can_id < 1 or can_id > 0x7FF:
+                    can_id = DEFAULT_CAN_ID
+                    print("CAN id out of range, using default")
+        except (OSError, ValueError):
+            can_id = DEFAULT_CAN_ID
+            print("Can't get CAN id, using default")
+
     q = RingbufQueue(5)
-    await asyncio.gather(can_task(q, CAN_ID), sensor_task(q))
+    await asyncio.gather(can_task(q, can_id), sensor_task(q))
 
 
 if __name__ == "__main__":
