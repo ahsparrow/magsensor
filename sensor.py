@@ -63,7 +63,10 @@ async def can_task(msg_q, can_id, board_id):
                     and len(rx_msg.data) == 8
                     and rx_msg.data[2:] == board_id[2:]
                 ):
+                    # Set new id and store it
                     can_id = rx_msg.data[1]
+                    with open("_can_id.txt", "w") as f:
+                        f.write(f"{can_id}\n")
 
                     # ACK message is "i" + 7 bytes id
                     buf = bytearray(board_id)
@@ -71,10 +74,6 @@ async def can_task(msg_q, can_id, board_id):
                     msg = Message(id=can_id, data=buf)
 
                     can.send(msg)
-
-                    # Store id
-                    with open("_can_id.txt", "w") as f:
-                        f.write(f"{can_id}\n")
 
         await asyncio.sleep_ms(0)
 
