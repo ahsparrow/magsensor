@@ -1,5 +1,5 @@
 import asyncio
-from machine import SPI, Pin
+from machine import SPI, Pin, unique_id
 from mcp2515 import MCP2515 as CAN
 from mcp2515.canio import Message
 from primitives import RingbufQueue
@@ -20,31 +20,58 @@ LED_PIN = 18
 SENSOR_PIN = 21
 
 
-async def can_task(msg_q, id):
+async def can_task(msg_q, can_id, board_id):
     spi = SPI(0, sck=Pin(SCK_PIN), mosi=Pin(MOSI_PIN), miso=Pin(MISO_PIN))
     cs = Pin(CAN_CS_PIN, Pin.OUT, value=1)
 
     can = CAN(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
+    # Ding message is "D" + two bytes delay + 5 bytes id
+    ding_buf = bytearray(board_id)
+    ding_buf[0] = ord("D")
+
     listener = can.listen()
     while True:
         # Check for outgoing requests
         if not msg_q.empty():
             delay = await msg_q.get()
-            print("Ding", delay)
-            data = struct.pack("<cI", b"D", delay)
+            struct.pack_into("<H", ding_buf, 1, min(delay, 65535))
 
-            tx_msg = Message(id=id, data=data)
-            can.send(tx_msg)
+            msg = Message(id=can_id, data=ding_buf)
+            can.send(msg)
+
+            print("Ding", delay)
 
         # Process any incoming messages
         if listener.in_waiting():
             rx_msg = listener.receive()
 
-            if rx_msg.data == b"ECHO":
-                tx_msg = Message(id=id, data=b"OHCE")
-                can.send(tx_msg)
+            if len(rx_msg.data) > 0:
+                if chr(rx_msg.data[0]) == "E":
+                    # Echo message is "e" + 7 bytes id
+                    buf = bytearray(board_id)
+                    buf[0] = ord("e")
+                    msg = Message(id=can_id, data=buf)
+
+                    can.send(msg)
+
+                elif (
+                    chr(rx_msg.data[0]) == "I"
+                    and len(rx_msg.data) == 8
+                    and rx_msg.data[2:] == board_id[2:]
+                ):
+                    can_id = rx_msg.data[1]
+
+                    # ACK message is "i" + 7 bytes id
+                    buf = bytearray(board_id)
+                    buf[0] = ord("i")
+                    msg = Message(id=can_id, data=buf)
+
+                    with open("_can_id.txt", "w") as f:
+                        f.write(f"{can_id}\n")
+
+                    can.send(msg)
 
         await asyncio.sleep_ms(0)
 
@@ -86,8 +113,9 @@ async def sensor_task(msg_q):
 
         # Delay from sensor start to centre
         trigger_delay = int(time.ticks_diff(stop, start) / 2000)
+        trigger_delay = max(trigger_delay, 100)
 
-        await asyncio.sleep_ms(1000)
+        await asyncio.sleep_ms(100)
 
 
 async def main(can_id=None):
@@ -99,12 +127,13 @@ async def main(can_id=None):
                 if can_id < 1 or can_id > 0x7FF:
                     can_id = DEFAULT_CAN_ID
                     print("CAN id out of range, using default")
+
         except (OSError, ValueError):
             can_id = DEFAULT_CAN_ID
-            print("Can't get CAN id, using default")
+            print("Can't read CAN id, using default")
 
     q = RingbufQueue(5)
-    await asyncio.gather(can_task(q, can_id), sensor_task(q))
+    await asyncio.gather(can_task(q, can_id, unique_id()), sensor_task(q))
 
 
 if __name__ == "__main__":
