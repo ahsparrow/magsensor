@@ -48,6 +48,7 @@ async def can_task(msg_q, can_id, board_id):
             rx_msg = listener.receive()
 
             if len(rx_msg.data) > 0:
+                # Echo
                 if chr(rx_msg.data[0]) == "E":
                     # Echo message is "e" + 7 bytes id
                     buf = bytearray(board_id)
@@ -56,6 +57,7 @@ async def can_task(msg_q, can_id, board_id):
 
                     can.send(msg)
 
+                # CAN id set
                 elif (
                     chr(rx_msg.data[0]) == "I"
                     and len(rx_msg.data) == 8
@@ -68,19 +70,22 @@ async def can_task(msg_q, can_id, board_id):
                     buf[0] = ord("i")
                     msg = Message(id=can_id, data=buf)
 
+                    can.send(msg)
+
+                    # Store id
                     with open("_can_id.txt", "w") as f:
                         f.write(f"{can_id}\n")
-
-                    can.send(msg)
 
         await asyncio.sleep_ms(0)
 
 
+# Send message after specified delay
 async def trigger_task(msg_q, delay_ms):
     await asyncio.sleep_ms(delay_ms)
     await msg_q.put(delay_ms)
 
 
+# Monitor magnetic sensor
 async def sensor_task(msg_q):
     pin = Pin(SENSOR_PIN, Pin.IN)
     led = Pin(LED_PIN, Pin.OUT, value=0)
@@ -88,17 +93,17 @@ async def sensor_task(msg_q):
     trigger_delay = 0
 
     while 1:
-        # Wait for sensor active and record start time
+        # Wait for sensor active
         while pin.value() == 1:
             await asyncio.sleep_ms(0)
 
+        start = time.ticks_us()
         led.value(1)
 
-        # Start trigger message task
-        start = time.ticks_us()
+        # Start trigger messaging task
         asyncio.create_task(trigger_task(msg_q, trigger_delay))
 
-        # Wait 10ms after sensor last active
+        # Wait 10ms after sensor last active for "debounce""
         timeout = 0
         while timeout < 10000:
             if pin.value() == 0:
@@ -111,7 +116,7 @@ async def sensor_task(msg_q):
 
         led.value(0)
 
-        # Delay from sensor start to centre
+        # Calculate delay from sensor start to centre
         trigger_delay = int(time.ticks_diff(stop, start) / 2000)
         trigger_delay = max(trigger_delay, 100)
 
