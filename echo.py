@@ -2,8 +2,7 @@ import asyncio
 from machine import SPI, Pin
 from mcp2515 import MCP2515 as CAN
 from mcp2515.canio import Message
-
-CAN_ID = 0
+import msgid
 
 
 async def can_task():
@@ -13,7 +12,7 @@ async def can_task():
     can = CAN(spi, cs)
     listener = can.listen()
 
-    msg = Message(CAN_ID, b"ECHO")
+    msg = Message(msgid.ECHO, b"")
     can.send(msg)
 
     while True:
