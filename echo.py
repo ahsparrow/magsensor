@@ -18,7 +18,8 @@ async def can_task():
     while True:
         if listener.in_waiting():
             rx_msg = listener.receive()
-            print(f"Message received: {rx_msg.id}, {bytes(rx_msg.data)}")
+            if rx_msg.id == msgid.ACK:
+                print(f"Received ACK: {rx_msg.data[0]}, {bytes(rx_msg.data)}")
 
         await asyncio.sleep_ms(0)
 
