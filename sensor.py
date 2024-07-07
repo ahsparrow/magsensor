@@ -27,13 +27,13 @@ async def can_task(msg_q, bell, board_id):
     can = CAN(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
-    # Ding message is two bytes delay + 6 bytes id
     ding_buf = bytearray(board_id)
 
     listener = can.listen()
     while True:
         # Check for outgoing requests
         if not msg_q.empty():
+            # Ding message is two bytes delay + 6 bytes id
             delay = await msg_q.get()
             struct.pack_into("<H", ding_buf, 0, min(delay, 65535))
 
