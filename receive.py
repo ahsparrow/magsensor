@@ -6,7 +6,7 @@ from mcp2515 import MCP2515 as CAN
 BELLS = "x1234567890ET"
 
 
-# Output bell message after a delay
+# Output the bell message after a specified delay
 async def delay(bell, delay_ms):
     await asyncio.sleep_ms(delay_ms)
     print(bell, end="")
