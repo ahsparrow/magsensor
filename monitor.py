@@ -4,22 +4,33 @@ from mcp2515.canio import Message
 import msgid
 import struct
 
+# Accept all messages
+MASKS = [0x0, 0x0]
+FILTERS = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
+
 
 def can_task():
     spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
     cs = Pin(9, Pin.OUT, value=1)
 
     can = CAN(spi, cs)
+    can.load_filters(MASKS, FILTERS)
+
     listener = can.listen()
 
+    # Broadcast ECHO request
     msg = Message(msgid.ECHO, b"")
     can.send(msg)
 
     while True:
         if listener.in_waiting():
             rx_msg = listener.receive()
+
             if rx_msg.id == msgid.ACK:
                 print(f"ACK: bell {rx_msg.data[0]}, {bytes(rx_msg.data)}")
+
+            elif rx_msg.id == msgid.SET:
+                print(f"SET: bell {rx_msg.data[0]}, {bytes(rx_msg.data)}")
 
             elif rx_msg.id < 16:
                 delay = struct.unpack("<H", rx_msg.data)[0]
