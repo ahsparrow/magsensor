@@ -18,7 +18,7 @@ async def delay(bell, delay_ms):
 
 async def main():
     # Get list of delays(ms) for each bell
-    with open("_delays.json") as f:
+    with open("delays.json") as f:
         delays = json.load(f)
         nbells = len(delays)
 

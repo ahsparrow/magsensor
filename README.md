@@ -26,7 +26,7 @@ with no arguments
 
 To edit a file on the board, for example
 
-    mpremote edit _delays.json
+    mpremote edit delays.json
 
 ## Sensor installation
 
@@ -40,7 +40,7 @@ Copy files to the sensor board
 
 ## Receiver installation
 
-Edit `_delays.json`, this contains a list of delays (in ms) between
+Edit `delays.json`, this contains a list of delays (in ms) between
 the sensor trigger and strike point for each bell. The number of delays
 must be equal to the number of bells. If you are using software delays
 in Abel, Virtual Belfry, etc. the delays can all be set to zero.
@@ -50,8 +50,8 @@ Copy files to the receiver board
     mpremote fs -f cp mcp2515 :
     mpremote fs cp msgid.py :
     mpremote fs cp receive.py :
+    mpremote fs cp delays.json :
     mpremote fs cp main_rx.py :main.py
-    mpremote fs cp _delays.json :_delays.json
 
 ## Setting the sensor bell id's
 
