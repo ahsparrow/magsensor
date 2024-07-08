@@ -9,7 +9,7 @@ BELLS = "x1234567890ET"
 # Output the bell message after a specified delay
 async def delay(bell, delay_ms):
     await asyncio.sleep_ms(delay_ms)
-    print(bell, end="")
+    print(BELLS[bell], end="")
 
 
 async def main():
@@ -30,7 +30,7 @@ async def main():
             rx_msg = listener.receive()
             bell = rx_msg.id
             if bell > 0 and bell <= nbells:
-                asyncio.create_task(delay(BELLS[bell], delays[bell - 1]))
+                asyncio.create_task(delay(bell, delays[bell - 1]))
 
         await asyncio.sleep_ms(0)
 

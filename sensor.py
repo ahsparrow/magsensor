@@ -45,6 +45,7 @@ async def can_task(msg_q, bell, board_id):
         # Process incoming messages
         if listener.in_waiting():
             rx_msg = listener.receive()
+            print(rx_msg.id, rx_msg.data)
 
             # Echo
             if rx_msg.id == msgid.ECHO:
@@ -57,10 +58,11 @@ async def can_task(msg_q, bell, board_id):
             if (
                 rx_msg.id == msgid.SET
                 and len(rx_msg.data) == 8
-                and rx_msg.data[1:] == board_id[1:]
+                and rx_msg.data[2:] == board_id[2:]
             ):
                 # Set bell number and store it
                 bell = rx_msg.data[0]
+                print("Set", bell)
                 with open("_bell.txt", "w") as f:
                     f.write(f"{bell}\n")
 
