@@ -40,12 +40,9 @@ async def can_task(msg_q, bell, board_id):
             msg = Message(id=bell, data=ding_buf)
             can.send(msg)
 
-            print("Ding", delay)
-
         # Process incoming messages
         if listener.in_waiting():
             rx_msg = listener.receive()
-            print(rx_msg.id, rx_msg.data)
 
             # Echo
             if rx_msg.id == msgid.ECHO:
@@ -62,7 +59,6 @@ async def can_task(msg_q, bell, board_id):
             ):
                 # Set bell number and store it
                 bell = rx_msg.data[0]
-                print("Set", bell)
                 with open("_bell.txt", "w") as f:
                     f.write(f"{bell}\n")
 
