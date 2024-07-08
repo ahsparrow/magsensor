@@ -58,7 +58,7 @@ Copy files to the receiver board
 For each bell in turn, with the bells down (and stationary) run the
 following command from a PC connected to the receiver
 
-    mpremote mount . run setbell.py <bell_num>
+    mpremote mount . exec  "import setbell; setbell.run(<bell number>)"
 
-where `bell_num` is 1 for the treble, etc., then follow the on-screen
+where `bell number` is 1 for the treble and so on. Then follow the on-screen
 instructions.
