@@ -6,12 +6,18 @@ import time
 CHECK_TIMEOUT = 5000
 SET_TIMEOUT = 10000
 
+# Accept all messages
+MASKS = [0x0, 0x0]
+FILTERS = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
+
 
 def setbell(bell):
     spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
     cs = Pin(9, Pin.OUT, value=1)
 
     can = CAN(spi, cs)
+    can.load_filters(MASKS, FILTERS)
+
     listener = can.listen()
 
     print("Checking bells are stationary, please wait...")
