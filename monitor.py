@@ -20,6 +20,7 @@ def can_task():
             rx_msg = listener.receive()
             if rx_msg.id == msgid.ACK:
                 print(f"ACK: bell {rx_msg.data[0]}, {bytes(rx_msg.data)}")
+
             elif rx_msg.id < 16:
                 delay = struct.unpack("<H", rx_msg.data)[0]
                 print(f"DING: bell {rx_msg.id}, delay {delay} , {bytes(rx_msg.data)}")
