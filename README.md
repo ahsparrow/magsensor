@@ -1,6 +1,6 @@
 # Bell Sensor
 
-## Clean install
+## Clean Install
 
 Power up the board while holding the BOOTSEL button down. The board will
 appear as a USB drive. Copy the
@@ -28,7 +28,7 @@ To edit a file on the board, for example
 
     mpremote edit delays.json
 
-## Sensor installation
+## Sensor Installation
 
 Copy files to the sensor board
 
@@ -38,7 +38,7 @@ Copy files to the sensor board
     mpremote fs cp sensor.py :
     mpremote fs cp main_tx.py :main.py
 
-## Receiver installation
+## Receiver Installation
 
 Edit `delays.json`, this contains a list of delays (in ms) between
 the sensor trigger and strike point for each bell. The number of delays
@@ -53,7 +53,7 @@ Copy files to the receiver board
     mpremote fs cp delays.json :
     mpremote fs cp main_rx.py :main.py
 
-## Setting the sensor bell id's
+## Setting Sensor Bell Numbers
 
 For each bell in turn, with the bells down (and stationary) run the
 following command from a PC connected to the receiver
