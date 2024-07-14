@@ -52,7 +52,7 @@ async def can_task(msg_q, bell, board_id):
                 can.send(msg)
 
             # Bell set
-            if (
+            elif (
                 rx_msg.id == msgid.SET
                 and len(rx_msg.data) == 8
                 and rx_msg.data[2:] == board_id[2:]
@@ -66,6 +66,9 @@ async def can_task(msg_q, bell, board_id):
                 buf[0] = bell
                 msg = Message(id=msgid.ACK, data=buf)
                 can.send(msg)
+
+            else:
+                print(f"Unknown message: {rx_msg.id}")
 
         await asyncio.sleep_ms(0)
 
