@@ -38,7 +38,10 @@ async def can_task(msg_q, bell, board_id):
             struct.pack_into("<H", ding_buf, 0, min(delay, 65535))
 
             msg = Message(id=bell, data=ding_buf)
-            can.send(msg)
+            try:
+                can.send(msg)
+            except RuntimeError:
+                print("Can't send ding message")
 
         # Process incoming messages
         if listener.in_waiting():
@@ -49,7 +52,10 @@ async def can_task(msg_q, bell, board_id):
                 buf = bytearray(board_id)
                 buf[0] = bell
                 msg = Message(id=msgid.ACK, data=buf)
-                can.send(msg)
+                try:
+                    can.send(msg)
+                except RuntimeError:
+                    print("Can't send echo ACK message")
 
             # Bell set
             elif (
@@ -65,7 +71,10 @@ async def can_task(msg_q, bell, board_id):
                 buf = bytearray(board_id)
                 buf[0] = bell
                 msg = Message(id=msgid.ACK, data=buf)
-                can.send(msg)
+                try:
+                    can.send(msg)
+                except RuntimeError:
+                    print("Can't send set ACK message")
 
             else:
                 print(f"Unknown message: {rx_msg.id}")
@@ -76,7 +85,10 @@ async def can_task(msg_q, bell, board_id):
 # Send message after specified delay
 async def trigger_task(msg_q, delay_ms):
     await asyncio.sleep_ms(delay_ms)
-    await msg_q.put(delay_ms)
+    if not msg_q.full():
+        await msg_q.put(delay_ms)
+    else:
+        print("Message queue full")
 
 
 # Monitor magnetic sensor
