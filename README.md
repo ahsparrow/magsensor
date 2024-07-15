@@ -43,7 +43,7 @@ Copy files to the sensor board
 Edit `delays.json`, this contains a list of delays (in ms) between
 the sensor trigger and strike point for each bell. The number of delays
 must be equal to the number of bells. If you are using software delays
-in Abel, Virtual Belfry, etc. the delays must all be set to zero.
+in Abel, Virtual Belfry, etc. the receiver delays must all be set to zero.
 
 Copy files to the receiver board
 
