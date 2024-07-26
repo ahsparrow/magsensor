@@ -57,8 +57,11 @@ async def main():
 
 
 async def logger(msg_q):
-    count = 0
-    buf = bytearray(10000)
+    strike_count = 0
+    touch_count = 0
+
+    # Maximum one hour's recording, each strike takes 4 bytes
+    buf = bytearray(3600 * 4)
     ticks_start = 0
 
     # Ensure log directory exists
@@ -74,34 +77,34 @@ async def logger(msg_q):
             bell = 0
 
         if bell > 0:
-            if count == 0:
+            if strike_count == 0:
+                # Start the touch
                 ticks_start = t
 
-            if count < 10000:
+            if (strike_count * 4) < len(buf):
                 struct.pack_into(
-                    "<BL", buf, count * 5, bell, time.ticks_diff(t, ticks_start)
+                    "<I",
+                    buf,
+                    strike_count * 4,
+                    (bell << 24) | time.ticks_diff(t, ticks_start),
                 )
-                count += 1
+                strike_count += 1
 
-        elif count > 0:
-            rotate_logs()
-            with open("/log/log.0", "wb") as f:
-                f.write(buf[: (count * 5)])
+        elif strike_count > 0:
+            # End of touch, if it's the first one delete existing logs
+            if touch_count == 0:
+                delete_logs()
 
-            count = 0
+            with open("/log/log.{:02d}".format(touch_count + 1), "wb") as f:
+                f.write(buf[: (strike_count * 4)])
+
+            strike_count = 0
+            touch_count += 1
 
 
-def rotate_logs():
-    try:
-        os.remove("/log/log.19")
-    except OSError:
-        pass
-
-    for i in range(19, 0, -1):
-        try:
-            os.rename("/log/log.{:d}".format(i - 1), "/log/log.{:d}".format(i))
-        except OSError:
-            pass
+def delete_logs():
+    for p in os.listdir("/log"):
+        os.remove("/log/" + p)
 
 
 if __name__ == "__main__":
