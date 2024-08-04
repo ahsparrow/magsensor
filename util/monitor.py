@@ -1,8 +1,9 @@
-from machine import SPI, Pin
-from mcp2515 import MCP2515 as CAN
-from mcp2515.canio import Message
-import msgid
 import struct
+from machine import SPI, Pin
+
+from magsensor.mcp2515 import MCP2515 as CAN
+from magsensor.mcp2515.canio import Message
+from magsensor import msgid
 
 # Accept all messages
 MASKS = [0x0, 0x0]

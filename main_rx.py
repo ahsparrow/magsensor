@@ -1,4 +1,4 @@
 import asyncio
-import receive
+import magsensor.receive
 
-asyncio.run(receive.main())
+asyncio.run(magsensor.receive.main())

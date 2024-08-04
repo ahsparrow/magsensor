@@ -1,4 +1,4 @@
 import asyncio
-import sensor
+import magsensor.sensor
 
-asyncio.run(sensor.main())
+asyncio.run(magsensor.sensor.main())

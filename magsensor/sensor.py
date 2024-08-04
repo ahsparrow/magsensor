@@ -1,11 +1,12 @@
 import asyncio
-from machine import SPI, Pin, unique_id
-from mcp2515 import MCP2515 as CAN
-from mcp2515.canio import Message
-from primitives import RingbufQueue
+import machine
 import struct
 import time
-import msgid
+
+from .mcp2515 import MCP2515 as CAN
+from .mcp2515.canio import Message
+from .primitives import RingbufQueue
+from . import msgid
 
 # Accept messages matching b0000001xxxx (i.e. ignore bell messages and ACKs)
 MASKS = [0x7F0, 0x7F0]
@@ -21,8 +22,13 @@ SENSOR_PIN = 21
 
 
 async def can_task(msg_q, bell, board_id):
-    spi = SPI(0, sck=Pin(SCK_PIN), mosi=Pin(MOSI_PIN), miso=Pin(MISO_PIN))
-    cs = Pin(CAN_CS_PIN, Pin.OUT, value=1)
+    spi = machine.SPI(
+        0,
+        sck=machine.Pin(SCK_PIN),
+        mosi=machine.Pin(MOSI_PIN),
+        miso=machine.Pin(MISO_PIN),
+    )
+    cs = machine.Pin(CAN_CS_PIN, machine.Pin.OUT, value=1)
 
     can = CAN(spi, cs)
     can.load_filters(MASKS, FILTERS)
@@ -93,8 +99,8 @@ async def trigger_task(msg_q, delay_ms):
 
 # Monitor magnetic sensor
 async def sensor_task(msg_q):
-    pin = Pin(SENSOR_PIN, Pin.IN)
-    led = Pin(LED_PIN, Pin.OUT, value=0)
+    pin = machine.Pin(SENSOR_PIN, machine.Pin.IN)
+    led = machine.Pin(LED_PIN, machine.Pin.OUT, value=0)
 
     trigger_delay = 0
 
@@ -145,7 +151,7 @@ async def main(bell=0):
             print("Can't read bell number, using default")
 
     q = RingbufQueue(5)
-    await asyncio.gather(can_task(q, bell, unique_id()), sensor_task(q))
+    await asyncio.gather(can_task(q, bell, machine.unique_id()), sensor_task(q))
 
 
 if __name__ == "__main__":

@@ -1,11 +1,12 @@
 import asyncio
 import json
-from machine import SPI, Pin
-from mcp2515 import MCP2515 as CAN
-from primitives import RingbufQueue
+import machine
 import os
 import struct
 import time
+
+from .mcp2515 import MCP2515 as CAN
+from .primitives import RingbufQueue
 
 BELLS = "x1234567890ET"
 
@@ -34,8 +35,8 @@ async def main():
         nbells = len(delays)
 
     # Create CAN driver
-    spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
-    cs = Pin(9, Pin.OUT, value=1)
+    spi = machine.SPI(0, sck=machine.Pin(2), mosi=machine.Pin(3), miso=machine.Pin(4))
+    cs = machine.Pin(9, machine.Pin.OUT, value=1)
 
     can = CAN(spi, cs)
     can.load_filters(MASKS, FILTERS)

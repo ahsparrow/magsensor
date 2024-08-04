@@ -1,7 +1,8 @@
 from machine import SPI, Pin
-from mcp2515 import MCP2515 as CAN
-import msgid
 import time
+
+from magsensor.mcp2515 import MCP2515 as CAN
+from magsensor import msgid
 
 CHECK_TIMEOUT = 5000
 SET_TIMEOUT = 10000
