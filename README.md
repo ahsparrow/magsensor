@@ -32,10 +32,7 @@ To edit a file on the board, for example
 
 Copy files to the sensor board
 
-    mpremote fs -r cp mcp2515 :
-    mpremote fs -r cp primitives :
-    mpremote fs cp msgid.py :
-    mpremote fs cp sensor.py :
+    mpremote fs cp -r magsensor :
     mpremote fs cp main_tx.py :main.py
 
 ## Receiver Installation
@@ -47,18 +44,18 @@ in Abel, Virtual Belfry, etc. the receiver delays must all be set to zero.
 
 Copy files to the receiver board
 
-    mpremote fs -f cp mcp2515 :
-    mpremote fs cp msgid.py :
-    mpremote fs cp receive.py :
+    mpremote fs cp -r magsensor :
+    mpremote fs cp -r util :
     mpremote fs cp delays.json :
     mpremote fs cp main_rx.py :main.py
+    mpremote fs mkdir :/log
 
 ## Setting Sensor Bell Numbers
 
 For each bell in turn and with the bells stationary run the
 following command from a PC connected to the receiver
 
-    mpremote mount . exec  "import setbell; setbell.run(<bell number>)"
+    mpremote mount . exec  "import util.setbell; util.setbell.run(<bell number>)"
 
 where `bell number` is 1 for the treble and so on. Then follow the on-screen
 instructions.
