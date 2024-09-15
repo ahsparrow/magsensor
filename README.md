@@ -59,3 +59,12 @@ following command from a PC connected to the receiver
 
 where `bell number` is 1 for the treble and so on. Then follow the on-screen
 instructions.
+
+## Cabling
+
+The DB9 connector uses the CAN OPEN (not OBD-II) pin out
+
+      2 - CAN_L   Blue/White
+      3 - GND     Orange/White
+      7 - CAN_H   Blue
+      9 - CAN_V+  Orange
