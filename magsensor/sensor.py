@@ -52,6 +52,8 @@ async def can_task(msg_q, bell, board_id):
 
     ding_buf = bytearray(2)
 
+    ident_req = False
+
     listener = can.listen()
     while True:
         # Check for outgoing requests
@@ -60,7 +62,12 @@ async def can_task(msg_q, bell, board_id):
             delay = await msg_q.get()
             struct.pack_into("<H", ding_buf, 0, min(delay, 65535))
 
-            msg = Message(id=msgid.BELL + bell, data=ding_buf)
+            if ident_req:
+                msg = Message(id=msgid.ACK + bell, data=board_id)
+                ident_req = False
+            else:
+                msg = Message(id=msgid.BELL + bell, data=ding_buf)
+
             try:
                 can.send(msg)
             except RuntimeError:
@@ -77,6 +84,10 @@ async def can_task(msg_q, bell, board_id):
                     can.send(msg)
                 except RuntimeError:
                     print("Can't send echo ACK message")
+
+            # Ident request
+            elif rx_msg.id & msgid.CMD_MASK == msgid.IDENT_REQ:
+                ident_req = True
 
             # Bell set
             elif (

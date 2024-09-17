@@ -2,6 +2,7 @@ from machine import SPI, Pin
 import time
 
 from magsensor.mcp2515 import MCP2515 as CAN
+from magsensor.mcp2515.canio import Message
 from magsensor import msgid
 
 CHECK_TIMEOUT = 5000
@@ -27,11 +28,12 @@ def setbell(bell):
         if listener.in_waiting():
             msg = listener.receive()
             print("ERROR - Detected bell movement.")
-            print("Please make sure all the bells aren't swinging and try again")
-            print(f"(Message id: {msg.id}, data: {msg.data})")
+            print("Please make sure none of the bells are swinging and try again")
             return
 
     print("...OK.")
+
+    can.send(Message(id=msgid.IDENT_REQ, data=b""))
     print("Now swing bell", bell)
 
     start = time.ticks_ms()
@@ -39,11 +41,12 @@ def setbell(bell):
     while timeout <= SET_TIMEOUT:
         if listener.in_waiting():
             msg = listener.receive()
-            if msg.id <= 15:
-                print(f"Bell {msg.id} detected, reassigning to {bell}")
+            if msg.id & msgid.CMD_MASK == msgid.ACK:
+                print(
+                    f"Bell {msg.id & ~msgid.CMD_MASK} detected, reassigning to {bell}"
+                )
 
-                msg.id = msgid.SET
-                msg.data[0] = bell
+                msg.id = msgid.BELL_SET + bell
                 can.send(msg)
                 return
 
