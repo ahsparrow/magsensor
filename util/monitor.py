@@ -20,22 +20,19 @@ def can_task():
     listener = can.listen()
 
     # Broadcast ECHO request
-    msg = Message(msgid.ECHO, b"")
+    msg = Message(msgid.ECHO_REQ, b"")
     can.send(msg)
 
     while True:
         if listener.in_waiting():
             rx_msg = listener.receive()
 
-            if rx_msg.id == msgid.ACK:
-                print(f"ACK: bell {rx_msg.data[0]}, {bytes(rx_msg.data)}")
-
-            elif rx_msg.id == msgid.SET:
-                print(f"SET: bell {rx_msg.data[0]}, {bytes(rx_msg.data)}")
+            if rx_msg.id & msgid.CMD_MASK == msgid.ACK:
+                print(f"ACK: bell {rx_msg.id & ~msgid.CMD_MASK}, {bytes(rx_msg.data)}")
 
             elif rx_msg.id < 16:
                 delay = struct.unpack("<H", rx_msg.data)[0]
-                print(f"DING: bell {rx_msg.id}, delay {delay} , {bytes(rx_msg.data)}")
+                print(f"DING: bell {rx_msg.id}, delay {delay}")
 
 
 if __name__ == "__main__":

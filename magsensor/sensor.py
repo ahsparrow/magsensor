@@ -25,9 +25,9 @@ from .mcp2515.canio import Message
 from .primitives import RingbufQueue
 from . import msgid
 
-# Accept messages matching b0000001xxxx (i.e. ignore bell messages and ACKs)
-MASKS = [0x7F0, 0x7F0]
-FILTERS = [0x10, 0x10, 0x10, 0x10, 0x10, 0x10]
+# Accept messages matching b0001xxxxxxx (i.e. ignore messages from other sensors)
+MASKS = [0x780, 0x0]
+FILTERS = [0x80, 0x80, 0x0, 0x0, 0x0, 0x0]
 
 # RP2040 pin assignments
 SCK_PIN = 2
@@ -50,17 +50,17 @@ async def can_task(msg_q, bell, board_id):
     can = CAN(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
-    ding_buf = bytearray(board_id)
+    ding_buf = bytearray(2)
 
     listener = can.listen()
     while True:
         # Check for outgoing requests
         if not msg_q.empty():
-            # Ding message is two bytes delay + 6 bytes id
+            # Ding message is two bytes delay
             delay = await msg_q.get()
             struct.pack_into("<H", ding_buf, 0, min(delay, 65535))
 
-            msg = Message(id=bell, data=ding_buf)
+            msg = Message(id=msgid.BELL + bell, data=ding_buf)
             try:
                 can.send(msg)
             except RuntimeError:
@@ -71,10 +71,8 @@ async def can_task(msg_q, bell, board_id):
             rx_msg = listener.receive()
 
             # Echo
-            if rx_msg.id == msgid.ECHO:
-                buf = bytearray(board_id)
-                buf[0] = bell
-                msg = Message(id=msgid.ACK, data=buf)
+            if rx_msg.id & msgid.CMD_MASK == msgid.ECHO_REQ:
+                msg = Message(id=msgid.ACK + bell, data=board_id)
                 try:
                     can.send(msg)
                 except RuntimeError:
@@ -82,18 +80,14 @@ async def can_task(msg_q, bell, board_id):
 
             # Bell set
             elif (
-                rx_msg.id == msgid.SET
-                and len(rx_msg.data) == 8
-                and rx_msg.data[2:] == board_id[2:]
+                rx_msg.id & msgid.CMD_MASK == msgid.BELL_SET and rx_msg.data == board_id
             ):
                 # Set bell number and store it
-                bell = rx_msg.data[0]
+                bell = rx_msg.id & ~msgid.CMD_MASK
                 with open("_bell.txt", "w") as f:
                     f.write(f"{bell}\n")
 
-                buf = bytearray(board_id)
-                buf[0] = bell
-                msg = Message(id=msgid.ACK, data=buf)
+                msg = Message(id=msgid.ACK + bell, data=board_id)
                 try:
                     can.send(msg)
                 except RuntimeError:

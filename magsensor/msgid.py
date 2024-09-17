@@ -15,7 +15,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ECHO = 0x10
-SET = 0x11
+# Message ID is 7 bits command + 4 bits bell number
 
-ACK = 0x20
+CMD_MASK = 0x7F0
+
+# -----------------
+# Sensor messages
+
+# Bell passing bottom dead centre
+BELL = 0x00
+
+# Sensor acknowledge
+ACK = 0x10
+
+# -------------------
+# Receiver messages
+
+# Resquest all sensors to send ACK
+ECHO_REQ = 0x80
+
+# Request all sensors to send ACK instead of next ding
+IDENT_REQ = 0x90
+
+# Set bell number
+BELL_SET = 0xA0
