@@ -39,6 +39,10 @@ SENSOR_PIN = 21
 
 
 async def can_task(msg_q, bell, board_id):
+    # Ident state
+    ident_state = False
+
+    # SPI setup
     spi = machine.SPI(
         0,
         sck=machine.Pin(SCK_PIN),
@@ -50,23 +54,20 @@ async def can_task(msg_q, bell, board_id):
     can = CAN(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
-    ding_buf = bytearray(2)
-
-    ident_req = False
-
+    # Message loop
     listener = can.listen()
     while True:
         # Check for outgoing requests
         if not msg_q.empty():
             # Ding message is two bytes delay
             delay = await msg_q.get()
-            struct.pack_into("<H", ding_buf, 0, min(delay, 65535))
+            data = struct.pack("<H", min(delay, 65535))
 
-            if ident_req:
+            if ident_state:
                 msg = Message(id=msgid.ACK + bell, data=board_id)
-                ident_req = False
+                ident_state = False
             else:
-                msg = Message(id=msgid.BELL + bell, data=ding_buf)
+                msg = Message(id=msgid.BELL + bell, data=data)
 
             try:
                 can.send(msg)
@@ -87,22 +88,21 @@ async def can_task(msg_q, bell, board_id):
 
             # Ident request
             elif rx_msg.id & msgid.CMD_MASK == msgid.IDENT_REQ:
-                ident_req = True
+                ident_state = True
 
             # Bell set
-            elif (
-                rx_msg.id & msgid.CMD_MASK == msgid.BELL_SET and rx_msg.data == board_id
-            ):
-                # Set bell number and store it
-                bell = rx_msg.id & ~msgid.CMD_MASK
-                with open("_bell.txt", "w") as f:
-                    f.write(f"{bell}\n")
+            elif rx_msg.id & msgid.CMD_MASK == msgid.BELL_SET:
+                if rx_msg.data == board_id:
+                    # Set bell number and store it
+                    bell = rx_msg.id & ~msgid.CMD_MASK
+                    with open("_bell.txt", "w") as f:
+                        f.write(f"{bell}\n")
 
-                msg = Message(id=msgid.ACK + bell, data=board_id)
-                try:
-                    can.send(msg)
-                except RuntimeError:
-                    print("Can't send set ACK message")
+                    msg = Message(id=msgid.ACK + bell, data=board_id)
+                    try:
+                        can.send(msg)
+                    except RuntimeError:
+                        print("Can't send set ACK message")
 
             else:
                 print(f"Unknown message: {rx_msg.id}")
