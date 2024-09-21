@@ -22,7 +22,7 @@ import os
 import struct
 import time
 
-from .mcp2515 import MCP2515 as CAN
+from .mcp2515 import MCP2515
 from .primitives import RingbufQueue
 
 BELLS = "x1234567890ET"
@@ -55,7 +55,7 @@ async def main():
     spi = machine.SPI(0, sck=machine.Pin(2), mosi=machine.Pin(3), miso=machine.Pin(4))
     cs = machine.Pin(9, machine.Pin.OUT, value=1)
 
-    can = CAN(spi, cs)
+    can = MCP2515(spi, cs, auto_restart=True)
     can.load_filters(MASKS, FILTERS)
 
     # Create logger

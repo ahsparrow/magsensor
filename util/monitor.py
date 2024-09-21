@@ -1,7 +1,7 @@
 import struct
 from machine import SPI, Pin
 
-from magsensor.mcp2515 import MCP2515 as CAN
+from magsensor.mcp2515 import MCP2515
 from magsensor.mcp2515.canio import Message
 from magsensor import msgid
 
@@ -14,7 +14,7 @@ def can_task():
     spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
     cs = Pin(9, Pin.OUT, value=1)
 
-    can = CAN(spi, cs)
+    can = MCP2515(spi, cs, auto_restart=True)
     can.load_filters(MASKS, FILTERS)
 
     listener = can.listen()

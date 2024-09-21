@@ -20,7 +20,7 @@ import machine
 import struct
 import time
 
-from .mcp2515 import MCP2515 as CAN
+from .mcp2515 import MCP2515
 from .mcp2515.canio import Message
 from .primitives import RingbufQueue
 from . import msgid
@@ -51,7 +51,7 @@ async def can_task(msg_q, bell, board_id):
     )
     cs = machine.Pin(CAN_CS_PIN, machine.Pin.OUT, value=1)
 
-    can = CAN(spi, cs)
+    can = MCP2515(spi, cs, auto_restart=True)
     can.load_filters(MASKS, FILTERS)
 
     # Message loop
