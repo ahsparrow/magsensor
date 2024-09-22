@@ -80,11 +80,12 @@ async def can_task(msg_q, bell, board_id):
 
             # Echo
             if rx_msg.id & msgid.CMD_MASK == msgid.ECHO_REQ:
-                msg = Message(id=msgid.ACK + bell, data=board_id)
-                try:
-                    can.send(msg)
-                except RuntimeError:
-                    print("Can't send echo ACK message")
+                if rx_msg.id & ~msgid.CMD_MASK == bell:
+                    msg = Message(id=msgid.ACK + bell, data=board_id)
+                    try:
+                        can.send(msg)
+                    except RuntimeError:
+                        print("Can't send echo ACK message")
 
             # Ident request
             elif rx_msg.id & msgid.CMD_MASK == msgid.IDENT_REQ:

@@ -17,16 +17,21 @@ def can_task():
     can = MCP2515(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
-    listener = can.listen()
+    listener = can.listen(timeout=10)
 
-    # Broadcast ECHO request
-    msg = Message(msgid.ECHO_REQ, b"")
-    can.send(msg)
+    # ECHO requests
+    for bell in range(1, 16):
+        msg = Message(msgid.ECHO_REQ + bell, b"")
+        can.send(msg)
+
+        rx_msg = listener.receive()
+        if rx_msg:
+            if rx_msg.id & msgid.CMD_MASK == msgid.ACK:
+                print(f"ACK: bell {rx_msg.id & ~msgid.CMD_MASK}, {bytes(rx_msg.data)}")
 
     while True:
-        if listener.in_waiting():
-            rx_msg = listener.receive()
-
+        rx_msg = listener.receive()
+        if rx_msg:
             if rx_msg.id & msgid.CMD_MASK == msgid.ACK:
                 print(f"ACK: bell {rx_msg.id & ~msgid.CMD_MASK}, {bytes(rx_msg.data)}")
 
