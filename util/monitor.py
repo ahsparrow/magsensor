@@ -14,7 +14,7 @@ def can_task():
     spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
     cs = Pin(9, Pin.OUT, value=1)
 
-    can = MCP2515(spi, cs, auto_restart=True)
+    can = MCP2515(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
     listener = can.listen()

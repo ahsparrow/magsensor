@@ -51,7 +51,7 @@ async def can_task(msg_q, bell, board_id):
     )
     cs = machine.Pin(CAN_CS_PIN, machine.Pin.OUT, value=1)
 
-    can = MCP2515(spi, cs, auto_restart=True)
+    can = MCP2515(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
     # Message loop

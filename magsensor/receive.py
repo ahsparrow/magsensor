@@ -55,7 +55,7 @@ async def main():
     spi = machine.SPI(0, sck=machine.Pin(2), mosi=machine.Pin(3), miso=machine.Pin(4))
     cs = machine.Pin(9, machine.Pin.OUT, value=1)
 
-    can = MCP2515(spi, cs, auto_restart=True)
+    can = MCP2515(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
     # Create logger
