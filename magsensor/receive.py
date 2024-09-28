@@ -17,10 +17,9 @@
 
 import asyncio
 import json
-import machine
-import os
-import struct
 import time
+
+import machine
 
 from .mcp2515 import MCP2515
 from .primitives import RingbufQueue
@@ -32,17 +31,29 @@ MASKS = [0x0, 0x0]
 FILTERS = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
 
 
-# Output the bell message after a specified delay
-async def delay(log_q, delay_ms, bell):
-    await asyncio.sleep_ms(delay_ms)
+# Output the bell message at specified time
+async def delay(bell, strike_ticks_ms, log_q):
+    t = time.ticks_diff(strike_ticks_ms, time.ticks_ms())
+    await asyncio.sleep_ms(t)
 
-    t = time.ticks_ms()
     print(BELLS[bell], end="")
 
     try:
-        log_q.put_nowait((bell, t))
+        log_q.put_nowait((bell, strike_ticks_ms))
     except IndexError:
         pass
+
+
+async def logger(msg_q):
+    # Create UART for PICO W comms
+    uart = machine.UART(0, 115200)
+    writer = asyncio.StreamWriter(uart)
+
+    while 1:
+        (bell, t) = await msg_q.get()
+
+        writer.write("{},{}\n".format(bell, t))
+        await writer.drain()
 
 
 async def main():
@@ -66,63 +77,16 @@ async def main():
     listener = can.listen()
     while True:
         if listener.in_waiting():
+            t = time.ticks_ms()
             rx_msg = listener.receive()
+
             bell = rx_msg.id
             if bell > 0 and bell <= nbells:
-                asyncio.create_task(delay(log_q, delays[bell - 1], bell))
-
-        await asyncio.sleep_ms(0)
-
-
-async def logger(msg_q):
-    strike_count = 0
-    touch_count = 0
-
-    # Maximum one hour's recording, each strike takes 4 bytes
-    buf = bytearray(3600 * 4)
-    ticks_start = 0
-
-    # Ensure log directory exists
-    try:
-        os.mkdir("/log")
-    except OSError:
-        pass
-
-    while 1:
-        try:
-            (bell, t) = await asyncio.wait_for(msg_q.get(), 5)
-        except asyncio.TimeoutError:
-            bell = 0
-
-        if bell > 0:
-            if strike_count == 0:
-                # Start the touch
-                ticks_start = t
-
-            if (strike_count * 4) < len(buf):
-                struct.pack_into(
-                    "<I",
-                    buf,
-                    strike_count * 4,
-                    (bell << 24) | time.ticks_diff(t, ticks_start),
+                asyncio.create_task(
+                    delay(bell, time.ticks_add(t, delays[bell - 1]), log_q)
                 )
-                strike_count += 1
 
-        elif strike_count > 0:
-            # End of touch, if it's the first one delete existing logs
-            if touch_count == 0:
-                delete_logs()
-
-            with open("/log/log.{:02d}".format(touch_count + 1), "wb") as f:
-                f.write(buf[: (strike_count * 4)])
-
-            strike_count = 0
-            touch_count += 1
-
-
-def delete_logs():
-    for p in os.listdir("/log"):
-        os.remove("/log/" + p)
+        yield
 
 
 if __name__ == "__main__":
