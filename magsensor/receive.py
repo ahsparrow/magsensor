@@ -22,6 +22,7 @@ import time
 import machine
 
 from .mcp2515 import MCP2515
+from .mcp2515.canio import Message
 from .primitives import RingbufQueue
 
 BELLS = "x1234567890ET"
@@ -38,30 +39,61 @@ async def delay(bell, strike_ticks_ms, log_q):
 
     print(BELLS[bell], end="")
 
-    try:
-        log_q.put_nowait((bell, strike_ticks_ms))
-    except IndexError:
-        pass
-
 
 async def logger(msg_q):
     # Create UART for PICO W comms
     uart = machine.UART(0, 115200)
     writer = asyncio.StreamWriter(uart)
 
-    while 1:
+    while True:
         (bell, t) = await msg_q.get()
 
         writer.write("{},{}\n".format(bell, t))
         await writer.drain()
 
 
-async def main():
+async def can_receive(can, log_q):
     # Get list of delays(ms) for each bell
     with open("delays.json") as f:
         delays = json.load(f)
         nbells = len(delays)
 
+    # Listen for bell messages
+    listener = can.listen()
+    while True:
+        if listener.in_waiting():
+            rx_msg = listener.receive()
+
+            bell = rx_msg.id
+            if bell > 0 and bell <= nbells:
+                strike_ticks_ms = time.ticks_add(time.ticks_ms(), delays[bell - 1])
+                asyncio.create_task(delay(bell, strike_ticks_ms, log_q))
+
+                # Send strike info to logger
+                try:
+                    log_q.put_nowait((bell, strike_ticks_ms))
+                except IndexError:
+                    pass
+
+        await asyncio.sleep_ms(0)
+
+
+async def can_loopback(can):
+    while 1:
+        for bell in [1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]:
+            msg = Message(bell, data=b"")
+
+            try:
+                can.send(msg)
+            except RuntimeError:
+                print("Can't send ding message")
+
+            await asyncio.sleep_ms(300)
+
+        await asyncio.sleep_ms(300)
+
+
+async def main():
     # Create CAN driver
     spi = machine.SPI(0, sck=machine.Pin(2), mosi=machine.Pin(3), miso=machine.Pin(4))
     cs = machine.Pin(9, machine.Pin.OUT, value=1)
@@ -69,25 +101,19 @@ async def main():
     can = MCP2515(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
-    # Create logger
     log_q = RingbufQueue(12)
-    asyncio.create_task(logger(log_q))
 
-    # Listen for bell messages
-    listener = can.listen()
-    while True:
-        if listener.in_waiting():
-            t = time.ticks_ms()
-            rx_msg = listener.receive()
-
-            bell = rx_msg.id
-            if bell > 0 and bell <= nbells:
-                asyncio.create_task(
-                    delay(bell, time.ticks_add(t, delays[bell - 1]), log_q)
-                )
-
-        yield
+    await asyncio.gather(can_receive(can, log_q), logger(log_q))
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+async def test():
+    # Create CAN driver (in loopback mode)
+    spi = machine.SPI(0, sck=machine.Pin(2), mosi=machine.Pin(3), miso=machine.Pin(4))
+    cs = machine.Pin(9, machine.Pin.OUT, value=1)
+
+    can = MCP2515(spi, cs, loopback=True, silent=True)
+    can.load_filters(MASKS, FILTERS)
+
+    log_q = RingbufQueue(12)
+
+    await asyncio.gather(can_loopback(can), can_receive(can, log_q), logger(log_q))
