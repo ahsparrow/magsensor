@@ -14,6 +14,10 @@ FILTERS = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
 
 
 def setbell(bell):
+    if bell < 1 or bell > 15:
+        print("Bell number must be between 1 and 15")
+        return
+
     spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
     cs = Pin(9, Pin.OUT, value=1)
 
@@ -54,10 +58,3 @@ def setbell(bell):
 
     if timeout > SET_TIMEOUT:
         print("ERROR - No bell movement detected, please try again")
-
-
-def run(bell):
-    if bell < 1 or bell > 15:
-        print("Bell number must be between 1 and 15")
-    else:
-        setbell(bell)

@@ -45,17 +45,20 @@ in Abel, Virtual Belfry, etc. the receiver delays must all be set to zero.
 Copy files to the receiver board
 
     mpremote fs cp -r magsensor :
-    mpremote fs cp -r util :
     mpremote fs cp delays.json :
     mpremote fs cp main_rx.py :main.py
     mpremote fs mkdir :/log
+
+## Check/monitor sensors
+
+    mpremote mount . run monitor.py
 
 ## Setting Sensor Bell Numbers
 
 For each bell in turn and with the bells stationary run the
 following command from a PC connected to the receiver
 
-    mpremote mount . exec  "import util.setbell; util.setbell.run(<bell number>)"
+    mpremote mount . exec  "import setbell; setbell.setbell(<bell number>)"
 
 where `bell number` is 1 for the treble and so on. Then follow the on-screen
 instructions.
