@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
+import asyncio.stream
 import json
 import time
 
@@ -23,7 +24,6 @@ import machine
 
 from .mcp2515 import MCP2515
 from .mcp2515.canio import Message
-from .primitives import RingbufQueue
 
 BELLS = "x1234567890ET"
 
@@ -32,31 +32,39 @@ MASKS = [0x0, 0x0]
 FILTERS = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
 
 
+class Delays:
+    def __init__(self):
+        self.set([])
+
+    def load(self, filename="delays.json"):
+        with open(filename) as f:
+            self.delays = json.load(f)
+            self.nbells = len(self.delays)
+
+    def save(self, filename="delays.json"):
+        with open(filename, "w") as f:
+            json.dump(self.delays, f)
+
+    def set(self, delays):
+        self.delays = delays
+        self.nbells = len(delays)
+
+
 # Output the bell message at specified time
-async def delay(bell, strike_ticks_ms, log_q):
+async def strike(bell, strike_ticks_ms, log_stream):
     t = time.ticks_diff(strike_ticks_ms, time.ticks_ms())
     await asyncio.sleep_ms(t)
 
     print(BELLS[bell], end="")
 
-
-async def logger(msg_q):
-    # Create UART for PICO W comms
-    uart = machine.UART(0, 115200)
-    writer = asyncio.StreamWriter(uart)
-
-    while True:
-        (bell, t) = await msg_q.get()
-
-        writer.write("{},{}\n".format(bell, t))
-        await writer.drain()
+    log_stream.write(b"B,")
+    log_stream.write(b",".join([str(bell).encode(), str(strike_ticks_ms).encode()]))
+    log_stream.write(b"\n")
+    await log_stream.drain()
 
 
-async def can_receive(can, log_q):
-    # Get list of delays(ms) for each bell
-    with open("delays.json") as f:
-        delays = json.load(f)
-        nbells = len(delays)
+async def can_listen(can, uart_stream, delays):
+    nbells = delays.nbells
 
     # Listen for bell messages
     listener = can.listen()
@@ -66,16 +74,32 @@ async def can_receive(can, log_q):
 
             bell = rx_msg.id
             if bell > 0 and bell <= nbells:
-                strike_ticks_ms = time.ticks_add(time.ticks_ms(), delays[bell - 1])
-                asyncio.create_task(delay(bell, strike_ticks_ms, log_q))
-
-                # Send strike info to logger
-                try:
-                    log_q.put_nowait((bell, strike_ticks_ms))
-                except IndexError:
-                    pass
+                strike_ticks_ms = time.ticks_add(
+                    time.ticks_ms(), delays.delays[bell - 1]
+                )
+                asyncio.create_task(strike(bell, strike_ticks_ms, uart_stream))
 
         await asyncio.sleep_ms(0)
+
+
+async def uart_listen(uart_stream, delays):
+    while True:
+        rxd = await uart_stream.readline()
+        data = rxd.split(b",")
+
+        if data[0].strip() == b"G":
+            # Return delays
+            uart_stream.write(b"D,")
+            uart_stream.write(b",".join([str(d).encode() for d in delays.delays]))
+            uart_stream.write(b"\n")
+            await uart_stream.drain()
+
+        elif data[0] == b"D":
+            # Set delays
+            dlys = [int(d) for d in data[1:]]
+            if len(dlys) == delays.nbells:
+                delays.set(dlys)
+                delays.save()
 
 
 async def can_loopback(can):
@@ -101,9 +125,15 @@ async def main():
     can = MCP2515(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
-    log_q = RingbufQueue(12)
+    uart = machine.UART(0, 115200)
+    uart_stream = asyncio.stream.Stream(uart)
 
-    await asyncio.gather(can_receive(can, log_q), logger(log_q))
+    delays = Delays()
+    delays.load()
+
+    await asyncio.gather(
+        can_listen(can, uart_stream, delays), uart_listen(uart_stream, delays)
+    )
 
 
 async def test():
@@ -114,6 +144,14 @@ async def test():
     can = MCP2515(spi, cs, loopback=True, silent=True)
     can.load_filters(MASKS, FILTERS)
 
-    log_q = RingbufQueue(12)
+    uart = machine.UART(0, 115200)
+    uart_stream = asyncio.stream.Stream(uart)
 
-    await asyncio.gather(can_loopback(can), can_receive(can, log_q), logger(log_q))
+    delays = Delays()
+    delays.load()
+
+    await asyncio.gather(
+        can_loopback(can),
+        can_listen(can, uart_stream, delays),
+        uart_listen(uart_stream, delays),
+    )
