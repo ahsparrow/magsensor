@@ -80,7 +80,8 @@ async def can_task(msg_q, bell, board_id):
 
             # Echo
             if rx_msg.id & msgid.CMD_MASK == msgid.ECHO_REQ:
-                if rx_msg.id & ~msgid.CMD_MASK == bell:
+                echo_req = rx_msg.id & ~msgid.CMD_MASK
+                if echo_req == 0 or echo_req == bell:
                     msg = Message(id=msgid.ACK + bell, data=board_id)
                     try:
                         can.send(msg)

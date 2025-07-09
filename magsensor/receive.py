@@ -24,6 +24,7 @@ import machine
 
 from .mcp2515 import MCP2515
 from .mcp2515.canio import Message
+from . import msgid
 
 BELLS = "x1234567890ET"
 
@@ -72,7 +73,7 @@ async def can_listen(can, uart_stream, delays):
         if listener.in_waiting():
             rx_msg = listener.receive()
 
-            bell = rx_msg.id
+            bell = rx_msg.id & ~msgid.CMD_MASK
             if bell > 0 and bell <= nbells:
                 strike_ticks_ms = time.ticks_add(
                     time.ticks_ms(), delays.delays[bell - 1]
@@ -117,6 +118,17 @@ async def can_loopback(can):
         await asyncio.sleep_ms(300)
 
 
+async def sensor_loopback(can):
+    msg = Message(msgid.ECHO_REQ, data=b"")
+    while 1:
+        try:
+            can.send(msg)
+        except RuntimeError:
+            print("Can't send echo_req message")
+
+        await asyncio.sleep_ms(1000)
+
+
 async def main():
     # Create CAN driver
     spi = machine.SPI(0, sck=machine.Pin(2), mosi=machine.Pin(3), miso=machine.Pin(4))
@@ -141,7 +153,8 @@ async def test():
     spi = machine.SPI(0, sck=machine.Pin(2), mosi=machine.Pin(3), miso=machine.Pin(4))
     cs = machine.Pin(9, machine.Pin.OUT, value=1)
 
-    can = MCP2515(spi, cs, loopback=True, silent=True)
+    # can = MCP2515(spi, cs, loopback=True, silent=True)
+    can = MCP2515(spi, cs)
     can.load_filters(MASKS, FILTERS)
 
     uart = machine.UART(0, 115200)
@@ -151,7 +164,8 @@ async def test():
     delays.load()
 
     await asyncio.gather(
-        can_loopback(can),
+        # can_loopback(can),
+        sensor_loopback(can),
         can_listen(can, uart_stream, delays),
         uart_listen(uart_stream, delays),
     )
